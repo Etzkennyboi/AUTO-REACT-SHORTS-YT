@@ -1,0 +1,84 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>React Stack — Automated Reaction Shorts</title>
+  <meta name="description" content="Paste a Shorts URL, download it, stack your reaction on top, and export a 1080x1920 MP4 — all in one click." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Header ─────────────────────────────────────── -->
+  <header>
+    <div class="logo">
+      <span class="logo-icon">⚡</span>
+      React Stack
+    </div>
+    <div class="react-status">
+      <span class="dot dot-yellow dot-pulse" id="reactDot"></span>
+      <span id="reactLbl">checking...</span>
+    </div>
+  </header>
+
+  <!-- ── Main ───────────────────────────────────────── -->
+  <main>
+
+    <!-- Input card -->
+    <section>
+      <div class="card">
+        <p class="section-label">New Reaction Short</p>
+
+        <div class="url-wrap">
+          <span class="url-icon">🔗</span>
+          <input
+            type="url"
+            id="urlInput"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Paste a YouTube Shorts, Reels, or TikTok URL…"
+          />
+        </div>
+
+        <div class="controls">
+          <select id="forceSelect">
+            <option value="auto">🔍 Auto-detect layout</option>
+            <option value="equal">⬛ Force equal split (50 / 50)</option>
+            <option value="third">🔲 Force 1/3 react (top)</option>
+          </select>
+          <button id="goBtn" onclick="startJob()">▶ Go</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live job panel (hidden until a job starts) -->
+    <section id="jobSection">
+      <div class="card">
+        <div class="job-header">
+          <span class="job-title">Processing</span>
+          <span class="job-badge badge-running" id="jobBadge">Running</span>
+        </div>
+
+        <div class="progress-track">
+          <div id="progressFill" class="progress-fill fill-running" style="width:0%"></div>
+        </div>
+        <p class="progress-label" id="progressLbl">0%</p>
+
+        <div id="terminal"></div>
+      </div>
+    </section>
+
+    <!-- Results shelf -->
+    <section id="resultsSection">
+      <p class="results-title">Jobs</p>
+      <div id="resultsGrid"></div>
+    </section>
+
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

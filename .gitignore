@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Media storage and generated files
+storage/*.mp4
+storage/*.mov
+storage/*.mkv
+!storage/.gitkeep
+
+# Rendered outputs
+out/*.mp4
+out/*.mov
+out/*.mkv
+!out/.gitkeep
+
+# Temporary processing files
+tmp/
+*.whl
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log

@@ -1,0 +1,6 @@
+﻿fastapi
+uvicorn[standard]
+yt-dlp
+pillow
+numpy
+python-multipart
