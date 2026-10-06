@@ -30,6 +30,13 @@ import sys
 import uuid
 from pathlib import Path
 
+# Ensure UTF-8 output encoding on Windows
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # Add user scripts to PATH
 _user_scripts = Path.home() / "AppData" / "Roaming" / "Python" / "Python314" / "Scripts"
 if _user_scripts.exists():
@@ -136,7 +143,7 @@ def render_916_short(
     dur_sec: float,
     out_file: Path,
     crop_filter: str = "crop=720:720:280:0",
-    split_ratio: str = "half",  # "half" (1080x960 each) or "third" (640 react, 1280 clip)
+    split_ratio: str = "third",  # "third" (640 react top, 1280 clip bot) or "half" (960/960)
 ) -> None:
     """Renders a vertical 9:16 Short (1080x1920) combining react.mp4 and compilation clip."""
     out_file.parent.mkdir(parents=True, exist_ok=True)
@@ -179,7 +186,7 @@ def render_916_short(
 
     print(f"[render] Encoding {out_file.name} ({dur_sec:.1f}s)...")
     subprocess.run(cmd, check=True, capture_output=True)
-    print(f"[done] ✓ Successfully rendered: {out_file}")
+    print(f"[done] [OK] Successfully rendered: {out_file}")
 
 
 def main():
@@ -194,8 +201,8 @@ def main():
     parser.add_argument("--start", type=float, help="Custom start timestamp (seconds)")
     parser.add_argument("--end", type=float, help="Custom end timestamp (seconds)")
     parser.add_argument("--batch", action="store_true", help="Batch render all detected clips")
-    parser.add_argument("--max-clips", type=int, default=10, help="Maximum clips to render in batch mode (default: 10)")
-    parser.add_argument("--split", choices=["half", "third"], default="half", help="Vertical split ratio (half: 960/960, third: 640/1280)")
+    parser.add_argument("--max-clips", type=int, default=15, help="Maximum clips to render in batch mode (default: 15)")
+    parser.add_argument("--split", choices=["third", "half"], default="third", help="Vertical split ratio (third: 640/1280, half: 960/960)")
     parser.add_argument("--crop", default="crop=720:720:280:0", help="FFmpeg crop filter to strip sidebars (default: crop=720:720:280:0)")
 
     args = parser.parse_args()
@@ -241,21 +248,13 @@ def main():
         render_916_short(source_file, react_path, c_start, c_dur, out_file, args.crop, args.split)
         return
 
-    # Step 5: Batch render mode
-    if args.batch:
-        to_render = clips[:args.max_clips]
-        print(f"\n[batch] Rendering {len(to_render)} Shorts...")
-        for idx, (c_start, c_end, c_dur) in enumerate(to_render, 1):
-            out_file = out_dir / f"short_clip{idx:02d}_{c_dur:.1f}s.mp4"
-            render_916_short(source_file, react_path, c_start, c_dur, out_file, args.crop, args.split)
-        print(f"\n[success] All {len(to_render)} Shorts rendered to: {out_dir}")
-        return
-
-    # Default if no specific action provided
-    print("\n[hint] Specify what to render:")
-    print(f"  python compilation_stacker.py \"{args.url}\" --clip 4")
-    print(f"  python compilation_stacker.py \"{args.url}\" --batch --max-clips 5")
-    print(f"  python compilation_stacker.py \"{args.url}\" --start 19.53 --end 30.77")
+    # Step 5: Batch render mode (Default behavior if no single clip specified)
+    to_render = clips[:args.max_clips]
+    print(f"\n[batch] Rendering {len(to_render)} Shorts with 1/3 react (640px) and 2/3 funny video (1280px)...")
+    for idx, (c_start, c_end, c_dur) in enumerate(to_render, 1):
+        out_file = out_dir / f"short_clip{idx:02d}_{c_dur:.1f}s.mp4"
+        render_916_short(source_file, react_path, c_start, c_dur, out_file, args.crop, args.split)
+    print(f"\n[success] All {len(to_render)} Shorts rendered to: {out_dir}")
 
 
 if __name__ == "__main__":
