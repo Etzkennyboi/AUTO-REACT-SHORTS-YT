@@ -144,25 +144,38 @@ def render_916_short(
     out_file: Path,
     crop_filter: str = "crop=720:720:280:0",
     split_ratio: str = "third",  # "third" (640 react top, 1280 clip bot) or "half" (960/960)
+    headstart_sec: float = 1.0,  # React headstart in seconds (clip frozen on 1st frame)
+    clip_volume: float = 2.0,    # Clip volume multiplier (2.0 = 200%)
+    react_volume: float = 0.8,   # React volume multiplier
 ) -> None:
-    """Renders a vertical 9:16 Short (1080x1920) combining react.mp4 and compilation clip."""
+    """Renders a vertical 9:16 Short (1080x1920) with react headstart freeze and 200% volume."""
     out_file.parent.mkdir(parents=True, exist_ok=True)
+    total_dur = dur_sec + headstart_sec
+
+    # Configure clip freeze & audio delay if headstart is active
+    if headstart_sec > 0:
+        delay_ms = int(headstart_sec * 1000)
+        freeze_vf = f",tpad=start_duration={headstart_sec}:start_mode=clone"
+        clip_af = f"volume={clip_volume},adelay={delay_ms}|{delay_ms}"
+    else:
+        freeze_vf = ""
+        clip_af = f"volume={clip_volume}"
 
     if split_ratio == "third":
         # React on top 1/3 (640px), Funny clip on bottom 2/3 (1280px)
         v_filter = (
             f"[0:v]scale=1138:640,crop=1080:640[react];"
-            f"[1:v]{crop_filter},scale=1080:1280:force_original_aspect_ratio=increase,crop=1080:1280[clip];"
+            f"[1:v]{crop_filter},scale=1080:1280:force_original_aspect_ratio=increase,crop=1080:1280{freeze_vf}[clip];"
             f"[react][clip]vstack=inputs=2[v];"
-            f"[0:a]volume=0.7[a0];[1:a]volume=1.0[a1];[a0][a1]amix=inputs=2:duration=first[a]"
+            f"[0:a]volume={react_volume}[a0];[1:a]{clip_af}[a1];[a0][a1]amix=inputs=2:duration=longest[a]"
         )
     else:
-        # Half split (1080x960 each) - optimal for square-ish funny clips
+        # Half split (1080x960 each)
         v_filter = (
             f"[0:v]scale=1706:960,crop=1080:960[react];"
-            f"[1:v]{crop_filter},scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[clip];"
+            f"[1:v]{crop_filter},scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960{freeze_vf}[clip];"
             f"[react][clip]vstack=inputs=2[v];"
-            f"[0:a]volume=0.7[a0];[1:a]volume=1.0[a1];[a0][a1]amix=inputs=2:duration=first[a]"
+            f"[0:a]volume={react_volume}[a0];[1:a]{clip_af}[a1];[a0][a1]amix=inputs=2:duration=longest[a]"
         )
 
     cmd = [
@@ -180,11 +193,11 @@ def render_916_short(
         "-crf", "22",
         "-c:a", "aac",
         "-b:a", "192k",
-        "-t", str(dur_sec),
+        "-t", str(total_dur),
         str(out_file),
     ]
 
-    print(f"[render] Encoding {out_file.name} ({dur_sec:.1f}s)...")
+    print(f"[render] Encoding {out_file.name} ({total_dur:.1f}s total: 1s react headstart + {dur_sec:.1f}s clip @ 200% vol)...")
     subprocess.run(cmd, check=True, capture_output=True)
     print(f"[done] [OK] Successfully rendered: {out_file}")
 
@@ -204,6 +217,9 @@ def main():
     parser.add_argument("--max-clips", type=int, default=15, help="Maximum clips to render in batch mode (default: 15)")
     parser.add_argument("--split", choices=["third", "half"], default="third", help="Vertical split ratio (third: 640/1280, half: 960/960)")
     parser.add_argument("--crop", default="crop=720:720:280:0", help="FFmpeg crop filter to strip sidebars (default: crop=720:720:280:0)")
+    parser.add_argument("--headstart", type=float, default=1.0, help="Reaction headstart in seconds with frozen clip frame (default: 1.0s)")
+    parser.add_argument("--clip-vol", type=float, default=2.0, help="Volume multiplier for compilation clip (default: 2.0 = 200 percent)")
+    parser.add_argument("--react-vol", type=float, default=0.8, help="Volume multiplier for reaction take (default: 0.8)")
 
     args = parser.parse_args()
 
@@ -226,7 +242,7 @@ def main():
             print("[error] --end must be greater than --start")
             sys.exit(1)
         out_name = out_dir if out_dir.suffix.lower() == ".mp4" else out_dir / f"short_{args.start:.1f}s_{args.end:.1f}s.mp4"
-        render_916_short(source_file, react_path, args.start, dur, out_name, args.crop, args.split)
+        render_916_short(source_file, react_path, args.start, dur, out_name, args.crop, args.split, args.headstart, args.clip_vol, args.react_vol)
         return
 
     # Step 3: Detect scenes
@@ -245,15 +261,15 @@ def main():
             sys.exit(1)
         c_start, c_end, c_dur = clips[args.clip - 1]
         out_file = out_dir / f"short_clip{args.clip:02d}_{c_dur:.1f}s.mp4"
-        render_916_short(source_file, react_path, c_start, c_dur, out_file, args.crop, args.split)
+        render_916_short(source_file, react_path, c_start, c_dur, out_file, args.crop, args.split, args.headstart, args.clip_vol, args.react_vol)
         return
 
     # Step 5: Batch render mode (Default behavior if no single clip specified)
     to_render = clips[:args.max_clips]
-    print(f"\n[batch] Rendering {len(to_render)} Shorts with 1/3 react (640px) and 2/3 funny video (1280px)...")
+    print(f"\n[batch] Rendering {len(to_render)} Shorts with 1/3 react, 1s headstart, and 200% clip volume...")
     for idx, (c_start, c_end, c_dur) in enumerate(to_render, 1):
         out_file = out_dir / f"short_clip{idx:02d}_{c_dur:.1f}s.mp4"
-        render_916_short(source_file, react_path, c_start, c_dur, out_file, args.crop, args.split)
+        render_916_short(source_file, react_path, c_start, c_dur, out_file, args.crop, args.split, args.headstart, args.clip_vol, args.react_vol)
     print(f"\n[success] All {len(to_render)} Shorts rendered to: {out_dir}")
 
 
