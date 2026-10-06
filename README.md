@@ -26,18 +26,19 @@ Powered by **Python**, **FFmpeg**, **FFprobe**, and **yt-dlp** — 100% local, f
 
 ```
 AUTO-REACT-SHORTS-YT/
-├── storage/            # Place your reaction clip here (storage/react.mp4)
-├── out/                # Rendered 1080x1920 output videos
-├── tmp/                # Temporary frame and download cache
-├── ui/                 # Web interface assets (HTML, CSS, JS)
+├── storage/                # Place your reaction clip here (storage/react.mp4)
+├── out/                    # Rendered 1080x1920 output videos
+├── tmp/                    # Temporary frame and download cache
+├── ui/                     # Web interface assets (HTML, CSS, JS)
 │   ├── index.html
 │   ├── style.css
 │   └── app.js
-├── main.py             # FastAPI backend with SSE streaming
-├── pipeline.py         # Core detection, layout, and FFmpeg encoding engine
-├── react_stack.py      # Standalone CLI entrypoint
-├── requirements.txt    # Python package dependencies
-├── run.bat             # Windows one-click launcher
+├── main.py                 # FastAPI backend with SSE streaming
+├── pipeline.py             # Core detection, layout, and FFmpeg encoding engine
+├── react_stack.py          # Standalone CLI entrypoint for individual Shorts
+├── compilation_stacker.py  # Automated scene-splitter & 9:16 Shorts stacker for long compilations
+├── requirements.txt        # Python package dependencies
+├── run.bat                 # Windows one-click launcher
 └── README.md
 ```
 
@@ -117,8 +118,23 @@ python react_stack.py "https://youtube.com/shorts/VIDEO_ID" --force half
 | `url` | YouTube Shorts URL or local file path | *Required* |
 | `--react` | Path to reaction video | `storage/react.mp4` |
 | `--out` | Output folder or output `.mp4` path | `out/` |
-| `--force` | Force layout split (`auto`, `third`, `half`) | `auto` |
-| `--tmp` | Temporary directory for caching | `tmp/` |
+### Method 3: Compilation Stacker (Long Videos to 9:16 Shorts)
+
+To cut individual funny clips out of long YouTube compilations (5–20 minutes), strip out the sidebars, and stack your reaction:
+
+```bash
+# 1. Scan compilation and list all detected funny clips with durations:
+python compilation_stacker.py "https://youtu.be/wfytNJTAZUA" --list
+
+# 2. Render a single detected clip (e.g. Clip 4):
+python compilation_stacker.py "https://youtu.be/wfytNJTAZUA" --clip 4
+
+# 3. Render a custom timestamp segment (e.g. 19.5s to 30.8s):
+python compilation_stacker.py "https://youtu.be/wfytNJTAZUA" --start 19.53 --end 30.77
+
+# 4. Batch render top 10 clips automatically:
+python compilation_stacker.py "https://youtu.be/wfytNJTAZUA" --batch --max-clips 10
+```
 
 ---
 

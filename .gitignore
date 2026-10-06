@@ -18,6 +18,8 @@ storage/*.mkv
 out/*.mp4
 out/*.mov
 out/*.mkv
+out/*.jpg
+out/*.png
 !out/.gitkeep
 
 # Temporary processing files
